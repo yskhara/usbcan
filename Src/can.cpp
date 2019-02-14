@@ -1,6 +1,6 @@
 #include "stm32f1xx_hal.h"
 #include "main.h"
-#include "can.h"
+#include "can.hpp"
 #include "led.h"
 
 extern CAN_HandleTypeDef hcan;

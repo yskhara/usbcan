@@ -5,7 +5,7 @@
  */
 
 #include "stm32f1xx_hal.h"
-#include "can.h"
+#include "can.hpp"
 #include "slcan.h"
 
 static uint32_t current_filter_id = 0;

@@ -7,7 +7,7 @@
 #ifndef _SLCAN_H
 #define _SLCAN_H
 
-#include "can.h"
+#include "can.hpp"
 
 int8_t slcan_parse_frame(uint8_t *buf, CAN_RxHeaderTypeDef *rx_header, uint8_t (&rx_payload)[CAN_MTU]);
 int8_t slcan_parse_str(uint8_t *buf, uint8_t len);

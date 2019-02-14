@@ -65,7 +65,6 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -86,7 +85,6 @@ extern "C" {
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
-
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
@@ -99,6 +97,8 @@ void Error_Handler(void);
 #ifdef __cplusplus
 }
 #endif
+
+#include "can.hpp"
 
 #endif /* __MAIN_H__ */
 

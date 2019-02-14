@@ -36,6 +36,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
+#include "can.hpp"
+#include "slcan.h"
+
+#include "SerialClass.hpp"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -234,6 +238,18 @@ extern "C"
         /* USER CODE BEGIN USB_LP_CAN1_RX0_IRQn 1 */
 
         /* USER CODE END USB_LP_CAN1_RX0_IRQn 1 */
+    }
+
+    /**
+     * @brief This function handles TIM3 global interrupt.
+     * this handler is called @ 100 Hz.
+     */
+    void TIM3_IRQHandler(void)
+    {
+        if((TIM3->SR & TIM_SR_UIF) != RESET)
+        {
+            TIM3->SR = ~TIM_SR_UIF;
+        }
     }
 
     /**

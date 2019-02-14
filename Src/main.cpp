@@ -6,8 +6,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f1xx_hal.h"
 
-#include "can.h"
 #include "main.h"
+#include "can.hpp"
 #include "led.h"
 #include "slcan.h"
 #include <array>
@@ -32,26 +32,13 @@ DMA_HandleTypeDef hdma_usart1_tx;
 
 /* Private function prototypes -----------------------------------------------*/
 
-#define CAN_MTU 8
-
-template<typename T>
-union _Encapsulator
-{
-    T data;
-    uint64_t i;
-};
-
-template<typename T>
-static void can_unpack(const uint8_t (&buf)[CAN_MTU], T &data);
-template<typename T>
-static void can_pack(uint8_t (&buf)[CAN_MTU], const T data);
-
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_CAN_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_DMA_Init(void);
 static void MX_CRC_Init(void);
+static void MX_TIM3_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -81,6 +68,7 @@ int main(void)
     MX_DMA_Init();
     MX_USART1_UART_Init();
     MX_CRC_Init();
+    //MX_TIM3_Init();
 
     LL_SYSTICK_EnableIT();
 
@@ -88,7 +76,7 @@ int main(void)
 
     // CANを初期化する．
     can_init();
-    // CANの通信速度を設定する．2018は500kbpsで通信した．
+    // CANの通信速度を設定する．2018は500kbpsで通信した．と思ってたけど実際は250kbpsだった...
     can_set_bitrate(CAN_BITRATE_500K);
 
     GPIOC->BSRR = GPIO_BSRR_BS13;
@@ -123,6 +111,11 @@ int main(void)
     can_enable();
 
 
+
+    //LL_TIM_EnableIT_UPDATE(TIM3);
+    //LL_TIM_EnableCounter(TIM3);
+
+    HAL_Delay(100);
 
     uint8_t slcan_str[SLCAN_MTU];
     uint8_t slcan_str_index = 0;
@@ -175,69 +168,47 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 }
 
 /**
- * @brief System Clock Configuration
- * @retval None
- */
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
-    RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
+  LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
-    /**Initializes the CPU, AHB and APB busses clocks
-     */
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-    RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-    RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
-    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-    RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
-    if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    /**Initializes the CPU, AHB and APB busses clocks
-     */
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+   if(LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
+  {
+    Error_Handler();
+  }
+  LL_RCC_HSE_Enable();
 
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
-    {
-        Error_Handler();
-    }
+   /* Wait till HSE is ready */
+  while(LL_RCC_HSE_IsReady() != 1)
+  {
+
+  }
+  LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
+  LL_RCC_PLL_Enable();
+
+   /* Wait till PLL is ready */
+  while(LL_RCC_PLL_IsReady() != 1)
+  {
+
+  }
+  LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+  LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
+  LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
+
+   /* Wait till System clock is ready */
+  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
+  {
+
+  }
+  LL_Init1msTick(72000000);
+  LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
+  LL_SetSystemCoreClock(72000000);
 }
 
-// unpacks can payload
-template<typename T>
-void can_unpack(const uint8_t (&buf)[CAN_MTU], T &data)
-{
-    _Encapsulator<T> _e;
-
-    for (int i = 0; i < sizeof(T); i++)
-    {
-        _e.i = (_e.i << 8) | (uint64_t) (buf[i]);
-    }
-
-    data = _e.data;
-}
-
-// packs can payload
-template<typename T>
-void can_pack(uint8_t (&buf)[CAN_MTU], const T data)
-{
-    _Encapsulator<T> _e;
-    _e.data = data;
-
-    for (int i = sizeof(T); i > 0;)
-    {
-        i--;
-        buf[i] = _e.i & 0xff;
-        _e.i >>= 8;
-    }
-}
 
 // CANのハードウェアを初期化する．
 /* CAN init function */
@@ -320,34 +291,65 @@ static void MX_DMA_Init(void)
  */
 static void MX_GPIO_Init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct;
+    LL_GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
     /* GPIO Ports Clock Enable */
-    __HAL_RCC_GPIOC_CLK_ENABLE()
-    ;
-    __HAL_RCC_GPIOD_CLK_ENABLE()
-    ;
-    __HAL_RCC_GPIOB_CLK_ENABLE()
-    ;
-    __HAL_RCC_GPIOA_CLK_ENABLE()
-    ;
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOC);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOD);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOA);
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
 
-    /*Configure GPIO pin Output Level */
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2, GPIO_PIN_RESET);
+    /**/
+    LL_GPIO_ResetOutputPin(GPIOC, LL_GPIO_PIN_13);
 
-    /*Configure GPIO pin : PB0, PB1, PB2 */
-    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    /**/
+    LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_15);
 
-    /*Configure GPIO pin : PC13 */
-    GPIO_InitStruct.Pin = GPIO_PIN_13;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    /**/
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    /**/
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_14;
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_FLOATING;
+    LL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    /**/
+    GPIO_InitStruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_15;
+    GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+    GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+    LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+}
+
+/**
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM3_Init(void)
+{
+    LL_TIM_InitTypeDef TIM_InitStruct = { 0 };
+
+    /* Peripheral clock enable */
+    LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
+
+    /* TIM3 interrupt Init */
+    NVIC_SetPriority(TIM3_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+    NVIC_EnableIRQ(TIM3_IRQn);
+
+    TIM_InitStruct.Prescaler = 72 - 1;
+    TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+    TIM_InitStruct.Autoreload = 1000 - 1;
+    TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+    LL_TIM_Init(TIM3, &TIM_InitStruct);
+    LL_TIM_DisableARRPreload(TIM3);
+    LL_TIM_SetClockSource(TIM3, LL_TIM_CLOCKSOURCE_INTERNAL);
+    LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_RESET);
+    LL_TIM_DisableMasterSlaveMode(TIM3);
 }
 
 /* USER CODE BEGIN 4 */

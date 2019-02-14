@@ -152,7 +152,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
         ;
 
         /* CAN1 interrupt Init */
-        HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 0, 0);
+        HAL_NVIC_SetPriority(USB_LP_CAN1_RX0_IRQn, 1, 1);
         HAL_NVIC_EnableIRQ(USB_LP_CAN1_RX0_IRQn);
     }
 }

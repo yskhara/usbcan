@@ -39,4 +39,48 @@ void can_set_filter(uint32_t id, uint32_t mask);
  }
 #endif
 
+
+#define CAN_MTU 8
+
+template<typename T>
+union _Encapsulator
+{
+    T data;
+    uint64_t i;
+};
+
+template<typename T>
+static void can_unpack(const uint8_t (&buf)[CAN_MTU], T &data);
+template<typename T>
+static void can_pack(uint8_t (&buf)[CAN_MTU], const T data);
+
+ // unpacks can payload
+ template<typename T>
+ void can_unpack(const uint8_t (&buf)[CAN_MTU], T &data)
+ {
+     _Encapsulator<T> _e;
+
+     for (int i = 0; i < sizeof(T); i++)
+     {
+         _e.i = (_e.i << 8) | (uint64_t) (buf[i]);
+     }
+
+     data = _e.data;
+ }
+
+ // packs can payload
+ template<typename T>
+ void can_pack(uint8_t (&buf)[CAN_MTU], const T data)
+ {
+     _Encapsulator<T> _e;
+     _e.data = data;
+
+     for (int i = sizeof(T); i > 0;)
+     {
+         i--;
+         buf[i] = _e.i & 0xff;
+         _e.i >>= 8;
+     }
+ }
+
 #endif // _CAN_H
