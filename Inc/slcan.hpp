@@ -4,8 +4,8 @@
  *  based on a version from linklayer/cantact-fw
  */
 
-#ifndef _SLCAN_H
-#define _SLCAN_H
+#ifndef _SLCAN_HPP
+#define _SLCAN_HPP
 
 #include "can.hpp"
 
@@ -18,4 +18,4 @@ int8_t slcan_parse_str(uint8_t *buf, uint8_t len);
 #define SLCAN_STD_ID_LEN 3
 #define SLCAN_EXT_ID_LEN 8
 
-#endif // _SLCAN_H
+#endif // _SLCAN_HPP

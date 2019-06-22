@@ -1,5 +1,5 @@
-#ifndef _CAN_H
-#define _CAN_H
+#ifndef _CAN_HPP
+#define _CAN_HPP
 
 #ifdef __cplusplus
  extern "C" {
@@ -39,8 +39,6 @@ void can_set_filter(uint32_t id, uint32_t mask);
  }
 #endif
 
-
-#define CAN_MTU 8
 
 template<typename T>
 union _Encapsulator
@@ -83,4 +81,4 @@ static void can_pack(uint8_t (&buf)[CAN_MTU], const T data);
      }
  }
 
-#endif // _CAN_H
+#endif // _CAN_HPP

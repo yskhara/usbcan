@@ -1,14 +1,14 @@
 
 #include "main.h"
 #include "can.hpp"
-#include "slcan.h"
+#include "slcan.hpp"
 #include "led.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
 extern CAN_HandleTypeDef hcan;
 CAN_FilterTypeDef filter;
-uint32_t prescaler;
+uint32_t prescaler = 48;
 enum can_bus_state bus_state;
 
 CAN_RxHeaderTypeDef rx_header;
@@ -16,6 +16,7 @@ uint8_t rx_payload[CAN_MTU];
 uint32_t status;
 uint8_t msg_buf[SLCAN_MTU];
 
+/*
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     status = can_rx(&rx_header, rx_payload);
@@ -29,6 +30,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     }
     led_process();
 }
+*/
 
 void can_init(void)
 {
@@ -97,12 +99,14 @@ void can_enable(void)
           Error_Handler();
         }
 
+#if 0
         /* Activate CAN RX notification */
         if (HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
         {
           /* Notification Error */
           Error_Handler();
         }
+#endif
     }
 
     GPIOB->BSRR = GPIO_BSRR_BS_6;

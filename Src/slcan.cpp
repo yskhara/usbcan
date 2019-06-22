@@ -6,8 +6,8 @@
 
 //#include "stm32f1xx_hal.h"
 #include "main.h"
+#include "slcan.hpp"
 #include "can.hpp"
-#include "slcan.h"
 
 static uint32_t current_filter_id = 0;
 static uint32_t current_filter_mask = 0;
