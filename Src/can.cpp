@@ -1,4 +1,3 @@
-
 #include "main.h"
 #include "can.hpp"
 #include "slcan.hpp"
@@ -8,7 +7,7 @@
 
 extern CAN_HandleTypeDef hcan;
 CAN_FilterTypeDef filter;
-uint32_t prescaler = 48;
+uint32_t prescaler = 2;
 enum can_bus_state bus_state;
 
 CAN_RxHeaderTypeDef rx_header;
@@ -17,25 +16,25 @@ uint32_t status;
 uint8_t msg_buf[SLCAN_MTU];
 
 /*
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
-{
-    status = can_rx(&rx_header, rx_payload);
-    if (status == HAL_OK)
-    {
-        status = slcan_parse_frame((uint8_t *) &msg_buf, &rx_header, rx_payload);
+ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+ {
+ status = can_rx(&rx_header, rx_payload);
+ if (status == HAL_OK)
+ {
+ status = slcan_parse_frame((uint8_t *) &msg_buf, &rx_header, rx_payload);
 
-        //serial.write(msg_buf, status);
-        CDC_Transmit_FS(msg_buf, status);
+ //serial.write(msg_buf, status);
+ CDC_Transmit_FS(msg_buf, status);
 
-    }
-    led_process();
-}
-*/
+ }
+ led_process();
+ }
+ */
 
 void can_init(void)
 {
-    // default to 125 kbit/s
-    prescaler = 48;
+    // default to 500 kbit/s
+    prescaler = 4;
     hcan.Instance = CAN;
     bus_state = OFF_BUS;
 }
@@ -74,29 +73,27 @@ void can_enable(void)
 {
     if (bus_state == OFF_BUS)
     {
+        hcan.Instance = CAN;
         hcan.Init.Prescaler = prescaler;
         hcan.Init.Mode = CAN_MODE_NORMAL;
         hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-        hcan.Init.TimeSeg1 = CAN_BS1_4TQ;
+        hcan.Init.TimeSeg1 = CAN_BS1_14TQ;
         hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
         hcan.Init.TimeTriggeredMode = DISABLE;
         hcan.Init.AutoBusOff = DISABLE;
         hcan.Init.AutoWakeUp = DISABLE;
-        hcan.Init.AutoRetransmission = ENABLE;
+        hcan.Init.AutoRetransmission = DISABLE;
         hcan.Init.ReceiveFifoLocked = DISABLE;
         hcan.Init.TransmitFifoPriority = DISABLE;
-        //hcan.pTxMsg = NULL;
         HAL_CAN_Init(&hcan);
         bus_state = ON_BUS;
         can_set_filter(0, 0);
 
-
-
         /* Start the CAN peripheral */
         if (HAL_CAN_Start(&hcan) != HAL_OK)
         {
-          /* Start Error */
-          Error_Handler();
+            /* Start Error */
+            Error_Handler();
         }
 
 #if 0
@@ -135,33 +132,33 @@ void can_set_bitrate(enum can_bitrate bitrate)
 
     switch (bitrate)
     {
-        case CAN_BITRATE_10K:
-            prescaler = 450;
-            break;
-        case CAN_BITRATE_20K:
-            prescaler = 225;
-            break;
-        case CAN_BITRATE_50K:
-            prescaler = 90;
-            break;
-        case CAN_BITRATE_100K:
-            prescaler = 45;
-            break;
-        case CAN_BITRATE_125K:
-            prescaler = 36;
-            break;
-        case CAN_BITRATE_250K:
-            prescaler = 18;
-            break;
-        case CAN_BITRATE_500K:
-            prescaler = 9;
-            break;
-        case CAN_BITRATE_750K:
-            prescaler = 6;
-            break;
-        case CAN_BITRATE_1000K:
-            prescaler = 4;
-            break;
+    case CAN_BITRATE_10K:
+        prescaler = 450;
+        break;
+    case CAN_BITRATE_20K:
+        prescaler = 225;
+        break;
+    case CAN_BITRATE_50K:
+        prescaler = 90;
+        break;
+    case CAN_BITRATE_100K:
+        prescaler = 45;
+        break;
+    case CAN_BITRATE_125K:
+        prescaler = 16;//36;
+        break;
+    case CAN_BITRATE_250K:
+        prescaler = 8;//18;
+        break;
+    case CAN_BITRATE_500K:
+        prescaler = 4;//9;
+        break;
+    case CAN_BITRATE_750K:
+        prescaler = 3;//6;
+        break;
+    case CAN_BITRATE_1000K:
+        prescaler = 2;//4;
+        break;
     }
 }
 

@@ -276,6 +276,6 @@ int8_t slcan_parse_str(uint8_t *buf, uint8_t len)
     // send the message
     can_tx(&tx_header, tx_payload);
 
-    return 0;
+    return 1;
 }
 

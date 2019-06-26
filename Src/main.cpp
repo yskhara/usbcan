@@ -96,8 +96,8 @@ int main(void)
 
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
-    MX_CAN_Init();
     MX_USB_DEVICE_Init();
+    //MX_CAN_Init();
     /* USER CODE BEGIN 2 */
 
     HAL_NVIC_SetPriority(USB_LP_IRQn, 1, 0);
@@ -115,7 +115,10 @@ int main(void)
 
     uint16_t i = 0;
 
+    can_init();
     //can_enable();
+
+    //HAL_CAN_Start(&hcan);
 
     /* USER CODE END 2 */
 
@@ -130,27 +133,16 @@ int main(void)
         while (!is_can_msg_pending(CAN_RX_FIFO0))
             led_process();
 
-        /*
-        HAL_Delay(10);
-
-        rx_header.DLC = 2;
-        rx_header.StdId = 0x4f4;
-        rx_header.IDE = CAN_ID_EXT;
-        rx_header.RTR = CAN_RTR_DATA;
-        rx_payload[0] = (i >> 8) & 0xff;
-        rx_payload[1] = i & 0xff;
-        status = HAL_OK;
-
-        i++;
-        */
-
         status = can_rx(&rx_header, rx_payload);
         if (status == HAL_OK)
         {
             status = slcan_parse_frame((uint8_t *) &msg_buf, &rx_header, rx_payload);
+            HAL_NVIC_DisableIRQ(USB_LP_IRQn);
             CDC_Transmit_FS(msg_buf, status);
+            HAL_NVIC_EnableIRQ(USB_LP_IRQn);
         }
         led_process();
+
     }
     /* USER CODE END 3 */
 }
@@ -161,21 +153,20 @@ int main(void)
  */
 void SystemClock_Config(void)
 {
-    LL_FLASH_SetLatency(LL_FLASH_LATENCY_1);
+    LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
-    if (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_1)
+    if (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
     {
         Error_Handler();
     }
-    LL_RCC_HSI_Enable();
+    LL_RCC_HSE_Enable();
 
-    /* Wait till HSI is ready */
-    while (LL_RCC_HSI_IsReady() != 1)
+    /* Wait till HSE is ready */
+    while (LL_RCC_HSE_IsReady() != 1)
     {
 
     }
-    LL_RCC_HSI_SetCalibTrimming(16);
-    LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSI_DIV_2, LL_RCC_PLL_MUL_12);
+    LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
     LL_RCC_PLL_Enable();
 
     /* Wait till PLL is ready */
@@ -193,10 +184,10 @@ void SystemClock_Config(void)
     {
 
     }
-    LL_Init1msTick(48000000);
+    LL_Init1msTick(72000000);
     LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
-    LL_SetSystemCoreClock(48000000);
-    LL_RCC_SetUSBClockSource(LL_RCC_USB_CLKSOURCE_PLL);
+    LL_SetSystemCoreClock(72000000);
+    LL_RCC_SetUSBClockSource(LL_RCC_USB_CLKSOURCE_PLL_DIV_1_5);
 }
 
 /**
@@ -215,11 +206,11 @@ static void MX_CAN_Init(void)
 
     /* USER CODE END CAN_Init 1 */
     hcan.Instance = CAN;
-    hcan.Init.Prescaler = 16;
+    hcan.Init.Prescaler = 2;
     hcan.Init.Mode = CAN_MODE_NORMAL;
     hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
-    hcan.Init.TimeSeg1 = CAN_BS1_1TQ;
-    hcan.Init.TimeSeg2 = CAN_BS2_1TQ;
+    hcan.Init.TimeSeg1 = CAN_BS1_14TQ;
+    hcan.Init.TimeSeg2 = CAN_BS2_3TQ;
     hcan.Init.TimeTriggeredMode = DISABLE;
     hcan.Init.AutoBusOff = DISABLE;
     hcan.Init.AutoWakeUp = DISABLE;
